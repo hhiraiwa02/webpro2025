@@ -11,7 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://webpro2025_db_1dcb_user:Qr0wOnlFGC00aBXjQpYNz2dZgHiWAv5d@dpg-d1dm62ripnbc73def1ig-a/webpro2025_db_1dcb"
 }
 
 model User {
