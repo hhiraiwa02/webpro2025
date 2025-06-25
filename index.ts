@@ -1,37 +1,41 @@
+import express from "express";
 // 生成した Prisma Client をインポート
 import { PrismaClient } from "./generated/prisma/client";
 const prisma = new PrismaClient({
   // クエリが実行されたときに実際に実行したクエリをログに表示する設定
   log: ["query"],
 });
+const app = express();
 
-async function main() {
-  // Prisma Client を使ってデータベースに接続
-  console.log("Prisma Client を初期化しました。");
+// 環境変数が設定されていれば、そこからポート番号を取得する。環境変数に設定がなければ 8888 を使用する。
+const PORT = process.env.PORT || 8888;
 
-  // ユーザーを取得
-  let users = await prisma.user.findMany();
-  console.log("Before ユーザー一覧:", users);
-  // ユーザーを追加
-  const newUser = await prisma.user.create({
-    data: {
-      name: `新しいユーザー ${new Date().toISOString()}`,
-    },
-  });
-  console.log("新しいユーザーを追加しました:", newUser);
+// EJS をテンプレートエンジンとして設定
+app.set("view engine", "ejs");
+app.set("views", "./views");
 
-  // もう一度ユーザーを取得
-  users = await prisma.user.findMany();
-  console.log("After ユーザー一覧:", users);
-}
+// form のデータを受け取れるように設定
+app.use(express.urlencoded({ extended: true }));
 
-// main 関数を実行する。エラーが発生した場合は、エラーメッセージを表示し、Prisma Client を切断する。
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    console.log("Prisma Client を切断しました。");
-  });
+// ルートハンドラー
+app.get("/", async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.render("index", { users });
+});
+
+// ユーザー追加ハンドラー
+app.post("/users", async (req, res) => {
+  const name = req.body.name; // フォームから送信された名前を取得
+  if (name) {
+    const newUser = await prisma.user.create({
+      data: { name },
+    });
+    console.log("新しいユーザーを追加しました:", newUser);
+  }
+  res.redirect("/"); // ユーザー追加後、一覧ページにリダイレクト
+});
+
+// サーバーを起動
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
