@@ -26,9 +26,15 @@ app.get("/", async (req, res) => {
 // ユーザー追加ハンドラー
 app.post("/users", async (req, res) => {
   const name = req.body.name; // フォームから送信された名前を取得
+  const age = Number(req.body.age); // フォームから送信された年齢を取得。
+  if (isNaN(age)) {
+    console.error("年齢は数値でなければなりません。");
+    res.status(400).send("年齢は数値でなければなりません。");
+    return;
+  }
   if (name) {
     const newUser = await prisma.user.create({
-      data: { name },
+      data: { name, age }, // 年齢も保存
     });
     console.log("新しいユーザーを追加しました:", newUser);
   }
