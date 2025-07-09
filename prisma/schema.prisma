@@ -15,12 +15,11 @@ datasource db {
   }
 
 model User {
-          id    Int     @id @default(autoincrement())
-          name  String @unique
-          email String @unique
-          password String
-          category   String?    //nullを許容
-        }
+  id       Int    @id @default(autoincrement())
+  name     String 
+  email    String? // この行が重要
+  password String?
+}
 
 model Paper {
           id    Int     @id @default(autoincrement())
