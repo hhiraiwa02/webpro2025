@@ -1,69 +1,91 @@
 import express from "express";
-// 生成した Prisma Client をインポート
 import { PrismaClient } from "./generated/prisma/client";
 
 const prisma = new PrismaClient({
-  // クエリが実行されたときに実際に実行したクエリをログに表示する設定
   log: ["query"],
 });
 
 const app = express();
-
-// 環境変数が設定されていれば、そこからポート番号を取得する。環境変数に設定がなければ 8888 を使用する。
 const PORT = process.env.PORT || 8888;
 
-// EJS をテンプレートエンジンとして設定するのじゃ。
-// これにより、Expressは.ejsファイルをビューとして使うようになるぞ。
 app.set("view engine", "ejs");
-// ビューファイル（.ejsファイル）がviewsフォルダにあることをExpressに伝えるのじゃ。
 app.set("views", "./views");
-
-// form のデータを受け取れるように設定するのじゃ。
-// これがないと、HTMLのフォームから送られたデータ（例: ユーザー名）をExpressが受け取れぬぞ。
 app.use(express.urlencoded({ extended: true }));
 
-// ルートハンドラーを設定するのじゃ。
-// ブラウザから '/' (例: http://localhost:8888/) にアクセスがあったときにこの処理が実行されるぞ。
 app.get("/", async (req, res) => {
-  // データベースからすべてのユーザーを取得するのじゃ。
+  // ユーザー一覧はそのまま
   const users = await prisma.user.findMany();
-  const papers = await prisma.paper.findMany();
+
+  // 検索クエリパラメータを取得
+  const searchTitle = req.query.searchTitle as string | undefined;
+  const searchAuthor = req.query.searchAuthor as string | undefined;
+  const searchCategory = req.query.searchCategory as string | undefined;
+
+  // 検索条件を構築
+  const paperWhereClause: any = {};
+  if (searchTitle) {
+    paperWhereClause.name = { contains: searchTitle, mode: "insensitive" }; // 部分一致検索 (大文字小文字を区別しない)
+  }
+  if (searchAuthor) {
+    paperWhereClause.author = { contains: searchAuthor, mode: "insensitive" };
+  }
+  if (searchCategory) {
+    paperWhereClause.category = {
+      contains: searchCategory,
+      mode: "insensitive",
+    };
+  }
+
+  // データベースから論文を取得（検索条件を適用）
+  const papers = await prisma.paper.findMany({
+    where: paperWhereClause,
+  });
+
   console.log("ユーザー一覧を取得したぞ:", users);
-  // 'index.ejs' というテンプレートファイルをレンダリングし、取得したユーザー情報を渡すのじゃ。
-  res.render("index", { users });
-  res.render("index", { papers });
+  console.log("論文一覧を取得したぞ:", papers);
+
+  // EJSテンプレートにユーザー、論文、現在の検索クエリを渡す
+  res.render("index", {
+    users,
+    papers,
+    searchTitle: searchTitle || "", // テンプレートで利用するために現在の検索クエリも渡す
+    searchAuthor: searchAuthor || "",
+    searchCategory: searchCategory || "",
+  });
 });
 
-// ユーザー追加ハンドラーを設定するのじゃ。
-// HTMLフォームから '/users' にPOSTリクエストがあったときにこの処理が実行されるぞ。
 app.post("/users", async (req, res) => {
-  const name = req.body.name; // フォームから送信された 'name' の値を取得するのじゃ。
+  const name = req.body.name;
   if (name) {
-    // 名前が入力されていれば、新しいユーザーをデータベースに追加するぞ。
     const newUser = await prisma.user.create({
       data: { name },
     });
     console.log("新しいユーザーを追加したぞ:", newUser);
   }
-  // ユーザー追加後、ルートページ（ユーザー一覧ページ）にリダイレクトするのじゃ。
   res.redirect("/");
 });
 
 app.post("/papers", async (req, res) => {
-  const name = req.body.name; // フォームから送信された 'name' の値を取得するのじゃ。
-  const author = req.body.author;
+  const { name, author, category, url, comment } = req.body;
+
   if (name && author) {
-    // 名前が入力されていれば、新しいユーザーをデータベースに追加するぞ。
+    // タイトルと著者は必須
     const newPaper = await prisma.paper.create({
-      data: { name: name, author: author },
+      data: {
+        name,
+        author,
+        category: category || null, // 任意項目は空文字列の場合nullにする
+        url: url || null,
+        comment: comment || null,
+      },
     });
+    console.log("新しい論文を追加したぞ:", newPaper);
+  } else {
+    console.warn("論文のタイトルと著者は必須です。");
   }
-  // ユーザー追加後、ルートページ（ユーザー一覧ページ）にリダイレクトするのじゃ。
   res.redirect("/");
 });
 
-// サーバーを起動するのじゃ。
-// 指定されたポートでリクエストを待ち受けるぞ。
 app.listen(PORT, () => {
   console.log(
     `サーバーが起動したぞ！ http://localhost:${PORT} でアクセスできるじゃろう。`
