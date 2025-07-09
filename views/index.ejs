@@ -6,7 +6,7 @@
     <style>
       /* 白黒を基調としたスタイリング */
       body {
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         margin: 20px;
         background-color: #f0f0f0; /* 薄いグレー */
         color: #333; /* 濃いグレーのテキスト */
@@ -60,7 +60,8 @@
       }
       form input[type="text"],
       form input[type="url"],
-      form textarea {
+      form textarea,
+      form select { /* select要素にもスタイルを適用 */
         width: calc(100% - 22px);
         padding: 10px;
         margin-bottom: 15px;
@@ -163,6 +164,22 @@
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
       }
+
+      /* ステータスセレクトボックスのスタイル */
+      .status-select {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        font-size: 0.85em;
+        cursor: pointer;
+        min-width: 100px;
+      }
+      .status-select:focus {
+        outline: none;
+        border-color: #666;
+        box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.2);
+      }
     </style>
   </head>
   <body>
@@ -207,6 +224,16 @@
           placeholder="カテゴリで検索"
         />
       </div>
+      <div>
+        <label for="searchStatus">ステータス:</label>
+        <select id="searchStatus" name="searchStatus" class="status-select">
+          <% statusOptions.forEach(option => { %>
+            <option value="<%= option %>" <%= searchStatus === option ? 'selected' : '' %>>
+              <%= option %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
       <button type="submit">検索</button>
       <button type="button" onclick="location.href='/papers'">リセット</button>
     </form>
@@ -223,6 +250,7 @@
           <th>カテゴリ</th>
           <th>ウェブサイト</th>
           <th>コメント</th>
+          <th>ステータス</th>
           <th>追加日時</th>
           <th>更新日時</th>
           <th>操作</th>
@@ -242,6 +270,15 @@
             <% } else { %> N/A <% } %>
           </td>
           <td><%= paper.comment || 'N/A' %></td>
+          <td>
+            <select class="status-select" data-paper-id="<%= paper.id %>">
+              <% statusOptions.slice(1).forEach(option => { /* 「全て」を除く */ %>
+                <option value="<%= option %>" <%= paper.status === option ? 'selected' : '' %>>
+                  <%= option %>
+                </option>
+              <% }) %>
+            </select>
+          </td>
           <td><%= new Date(paper.createdAt).toLocaleString('ja-JP') %></td>
           <td><%= new Date(paper.updatedAt).toLocaleString('ja-JP') %></td>
           <td class="actions">
@@ -266,10 +303,7 @@
     <% } %> ---
 
     <h2><%= editPaper ? '論文編集' : '論文追加' %></h2>
-    <form
-      action="<%= editPaper ? '/papers/update/' + editPaper.id : '/papers' %>"
-      method="post"
-    >
+    <form action="<%= editPaper ? '/papers/update/' + editPaper.id : '/papers' %>" method="post">
       <label for="paperName">論文タイトル (必須):</label>
       <input
         type="text"
@@ -314,18 +348,63 @@
         name="comment"
         placeholder="コメントを入力"
         rows="4"
-      >
-<%= editPaper ? editPaper.comment : '' %></textarea
-      >
+      ><%= editPaper ? editPaper.comment : '' %></textarea>
 
-      <button type="submit">
-        <%= editPaper ? '論文を更新' : '論文追加' %>
-      </button>
+      <label for="paperStatus">ステータス:</label>
+      <select id="paperStatus" name="status" class="status-select">
+        <% statusOptions.slice(1).forEach(option => { /* 「全て」を除く */ %>
+          <option value="<%= option %>" <%= editPaper && editPaper.status === option ? 'selected' : '' %>>
+            <%= option %>
+          </option>
+        <% }) %>
+      </select>
+      <br><br>
+
+      <button type="submit"><%= editPaper ? '論文を更新' : '論文追加' %></button>
       <% if (editPaper) { %>
-      <button type="button" onclick="location.href='/papers'">
-        キャンセル
-      </button>
+      <button type="button" onclick="location.href='/papers'">キャンセル</button>
       <% } %>
     </form>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const statusSelects = document.querySelectorAll('.status-select[data-paper-id]');
+
+        statusSelects.forEach(selectElement => {
+          selectElement.addEventListener('change', async (event) => {
+            const paperId = event.target.dataset.paperId;
+            const newStatus = event.target.value;
+
+            try {
+              const response = await fetch(`/api/papers/${paperId}/status`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+              });
+
+              if (response.ok) {
+                console.log('ステータス更新成功！');
+                // 成功メッセージ表示や、必要ならUIの更新（今回はページリロードしないので不要）
+              } else {
+                const errorData = await response.json();
+                console.error('ステータス更新失敗:', errorData.message);
+                alert('ステータスの更新に失敗しました: ' + errorData.message);
+                // 失敗したら元の値に戻す
+                event.target.value = event.target.dataset.originalStatus || '';
+              }
+            } catch (error) {
+              console.error('ネットワークエラー:', error);
+              alert('ステータスの更新中にネットワークエラーが発生しました。');
+              event.target.value = event.target.dataset.originalStatus || '';
+            }
+          });
+
+          // ロード時に元のステータスを保持しておく (失敗時のロールバック用)
+          selectElement.dataset.originalStatus = selectElement.value;
+        });
+      });
+    </script>
   </body>
 </html>

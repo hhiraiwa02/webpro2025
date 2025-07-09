@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 8888;
 app.set("view engine", "ejs");
 app.set("views", "./views");
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // JSONボディをパースするために追加
 
 // セッションミドルウェアの設定
 app.use(
@@ -138,6 +139,7 @@ app.get("/papers", isAuthenticated, async (req, res) => {
   const searchTitle = req.query.searchTitle as string | undefined;
   const searchAuthor = req.query.searchAuthor as string | undefined;
   const searchCategory = req.query.searchCategory as string | undefined;
+  const searchStatus = req.query.searchStatus as string | undefined; // ステータス検索を追加
 
   const paperWhereClause: any = { userId: userId };
   if (searchTitle) {
@@ -152,11 +154,15 @@ app.get("/papers", isAuthenticated, async (req, res) => {
       mode: "insensitive",
     };
   }
+  if (searchStatus && searchStatus !== "全て") {
+    // 「全て」でない場合のみフィルタ
+    paperWhereClause.status = searchStatus;
+  }
 
   const papers = await prisma.paper.findMany({
     where: paperWhereClause,
     orderBy: {
-      updatedAt: "desc", // 更新日時でソート
+      updatedAt: "desc",
     },
   });
 
@@ -164,13 +170,18 @@ app.get("/papers", isAuthenticated, async (req, res) => {
 
   console.log("ログインユーザーの論文一覧を取得したぞ:", papers);
 
+  // ステータスオプションを定義
+  const statusOptions = ["全て", "未読", "読了", "要再読", "レビュー中"];
+
   res.render("index", {
     userName: user?.name,
     papers,
     searchTitle: searchTitle || "",
     searchAuthor: searchAuthor || "",
     searchCategory: searchCategory || "",
-    editPaper: null, // 編集モードではないことを示す
+    searchStatus: searchStatus || "全て", // 選択中のステータスを渡す
+    statusOptions, // ステータスオプションを渡す
+    editPaper: null,
   });
 });
 
@@ -189,6 +200,7 @@ app.post("/papers", isAuthenticated, async (req, res) => {
           url: url || null,
           comment: comment || null,
           userId: userId,
+          status: "未読", // 新規作成時はデフォルトで「未読」
         },
       });
       console.log("新しい論文を追加したぞ:", newPaper);
@@ -212,7 +224,6 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
     });
 
     if (!paperToEdit || paperToEdit.userId !== userId) {
-      // 論文が存在しないか、現在のユーザーのものでない場合
       return res.redirect("/papers");
     }
 
@@ -221,6 +232,7 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
       orderBy: { updatedAt: "desc" },
     });
     const user = await prisma.user.findUnique({ where: { id: userId } });
+    const statusOptions = ["未読", "読了", "要再読", "レビュー中"]; // 編集ページでもオプションを渡す
 
     res.render("index", {
       userName: user?.name,
@@ -228,7 +240,9 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
       searchTitle: "",
       searchAuthor: "",
       searchCategory: "",
-      editPaper: paperToEdit, // 編集対象の論文データを渡す
+      searchStatus: "全て", // 編集画面表示時は検索ステータスをリセット
+      statusOptions,
+      editPaper: paperToEdit,
     });
   } catch (error) {
     console.error("論文編集フォーム表示エラー:", error);
@@ -240,7 +254,7 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
 app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
   const paperId = parseInt(req.params.id);
-  const { name, author, category, url, comment } = req.body;
+  const { name, author, category, url, comment, status } = req.body; // statusも受け取る
 
   if (!name || !author) {
     console.warn("論文のタイトルと著者は必須です。");
@@ -253,7 +267,6 @@ app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
     });
 
     if (!existingPaper || existingPaper.userId !== userId) {
-      // 論文が存在しないか、現在のユーザーのものでない場合
       return res.redirect("/papers");
     }
 
@@ -265,7 +278,7 @@ app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
         category: category || null,
         url: url || null,
         comment: comment || null,
-        updatedAt: new Date(), // 更新日時を明示的に設定（@updatedAtが自動でやってくれるが念のため）
+        status: status, // ステータスを更新
       },
     });
     console.log("論文を更新したぞ:", updatedPaper);
@@ -273,6 +286,42 @@ app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
     console.error("論文更新エラー:", error);
   }
   res.redirect("/papers");
+});
+
+// **論文ステータス更新APIエンドポイント**
+app.patch("/api/papers/:id/status", isAuthenticated, async (req, res) => {
+  const userId = req.session.userId;
+  const paperId = parseInt(req.params.id);
+  const { status } = req.body; // 新しいステータスを受け取る
+
+  // 有効なステータスかチェック
+  const validStatuses = ["未読", "読了", "要再読", "レビュー中"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ message: "無効なステータス値です。" });
+  }
+
+  try {
+    const existingPaper = await prisma.paper.findUnique({
+      where: { id: paperId },
+    });
+
+    if (!existingPaper || existingPaper.userId !== userId) {
+      return res.status(403).json({ message: "権限がありません。" });
+    }
+
+    const updatedPaper = await prisma.paper.update({
+      where: { id: paperId },
+      data: {
+        status: status,
+      },
+    });
+    res
+      .status(200)
+      .json({ message: "ステータスが更新されました。", paper: updatedPaper });
+  } catch (error) {
+    console.error("ステータス更新エラー:", error);
+    res.status(500).json({ message: "ステータスの更新に失敗しました。" });
+  }
 });
 
 // 論文削除処理（認証が必要）
@@ -286,7 +335,6 @@ app.post("/papers/delete/:id", isAuthenticated, async (req, res) => {
     });
 
     if (!existingPaper || existingPaper.userId !== userId) {
-      // 論文が存在しないか、現在のユーザーのものでない場合
       return res.redirect("/papers");
     }
 

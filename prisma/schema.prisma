@@ -11,7 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = "postgresql://webpro2025_db_ous9_user:9CLdPylfy8Lj5EykH5RxcnYytTOSJnWo@dpg-d1n4c1mmcj7s73bko6ng-a/webpro2025_db_ous9"
+  url = "postgresql://webpro2025_db_04fq_user:nSBPkb62J3KgK0AfBI3nGqe1EKzD1Sd1@dpg-d1n4ireuk2gs739hsun0-a/webpro2025_db_04fq"
     }
 
 // schema.prisma
@@ -34,4 +34,5 @@ model Paper {
   user     User    @relation(fields: [userId], references: [id]) // Userモデルへのリレーション
   createdAt DateTime @default(now()) // 追加日時
   updatedAt DateTime @updatedAt // 更新日時
+  status    String   @default("未読") // 新しく追加
 }      
