@@ -34,6 +34,12 @@ const isAuthenticated = (
   res: express.Response,
   next: express.NextFunction
 ) => {
+  console.log(
+    "isAuthenticatedチェック:",
+    req.session && (req.session as any).userId ? "認証済み" : "未認証"
+  );
+  console.log("現在のセッションID:", req.sessionID);
+  console.log("現在のセッションデータ:", req.session);
   if (req.session && (req.session as any).userId) {
     return next();
   }
