@@ -2,7 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>ユーザーと論文一覧</title>
+    <title>論文一覧と管理</title>
     <style>
       body {
         font-family: sans-serif;
@@ -41,6 +41,7 @@
         border: none;
         border-radius: 4px;
         cursor: pointer;
+        margin-right: 5px; /* ボタン間のスペース */
       }
       form button:hover {
         background-color: #0056b3;
@@ -65,28 +66,30 @@
       .search-form input {
         margin-right: 10px;
       }
+      .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .header-section button {
+        background-color: #dc3545;
+      }
+      .header-section button:hover {
+        background-color: #c82333;
+      }
     </style>
   </head>
   <body>
-    <h1>ユーザーと論文管理</h1>
-
-    <h2>ユーザー一覧</h2>
-    <ul>
-      <% users.forEach(user => { %>
-      <li><%= user.name %></li>
-      <% }) %>
-    </ul>
-
-    <h2>ユーザー追加</h2>
-    <form action="/users" method="post">
-      <input type="text" name="name" placeholder="ユーザー名を入力" required />
-      <button type="submit">追加</button>
-    </form>
-
-    ---
+    <div class="header-section">
+      <h1>論文一覧と管理</h1>
+      <form action="/logout" method="get">
+        <button type="submit">ログアウト</button>
+      </form>
+    </div>
 
     <h2>論文検索</h2>
-    <form action="/" method="get" class="search-form">
+    <form action="/papers-dashboard" method="get" class="search-form">
       <label for="searchTitle">タイトル:</label>
       <input
         type="text"
@@ -114,7 +117,9 @@
         placeholder="カテゴリで検索"
       />
       <button type="submit">検索</button>
-      <button type="button" onclick="location.href='/'">リセット</button>
+      <button type="button" onclick="location.href='/papers-dashboard'">
+        リセット
+      </button>
     </form>
 
     ---
@@ -137,7 +142,6 @@
           <td><%= paper.name %></td>
           <td><%= paper.author %></td>
           <td><%= paper.category || 'N/A' %></td>
-          <%# カテゴリがnullの場合は'N/A'と表示 %>
           <td>
             <% if (paper.url) { %>
             <a href="<%= paper.url %>" target="_blank" rel="noopener noreferrer"

@@ -16,7 +16,9 @@ datasource db {
 
 model User {
           id    Int     @id @default(autoincrement())
-          name  String
+          name  String @unique
+          email String @unique
+          pass String
           category   String?    //nullを許容
         }
 
