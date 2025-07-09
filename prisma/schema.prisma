@@ -11,8 +11,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = "postgresql://webpro2025_db_3xro_user:7eaDcUSUsmRKsLI1B2t0OwpDeTLF0YDr@dpg-d1mu6r3uibrs73dp8fu0-a/webpro2025_db_3xro"
-  }
+  url = "postgresql://webpro2025_db_4leg_user:sX0TXOIpU4IFtRLHpVMhyw8vwp3lE1M7@dpg-d1n3la6r433s73bac600-a/webpro2025_db_4leg"
+    }
 
 // schema.prisma
 model User {
