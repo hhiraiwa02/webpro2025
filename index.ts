@@ -19,7 +19,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "your_secret_key",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === "production" },
+    cookie: { secure: process.env.NODE_ENV === "production" ? true : false },
   })
 );
 
@@ -116,7 +116,10 @@ app.post("/login", async (req, res) => {
     }
 
     (req.session as any).userId = user.id;
-    console.log("isAunthenticated : ", isAuthenticated);
+    console.log(
+      "ログイン成功！セッションに保存を試みました。UserID:",
+      (req.session as any).userId
+    );
     res.redirect("/papers-dashboard"); // セッション保存を待たずにリダイレクト
   } catch (error) {
     console.error("ログインエラー:", error);
