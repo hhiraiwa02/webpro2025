@@ -110,7 +110,7 @@ app.post("/login", async (req, res) => {
     }
 
     (req.session as any).userId = user.id;
-    console.log("move to papers-dashboard");
+    console.log("isAunthenticated : ", isAuthenticated);
     res.redirect("/papers-dashboard"); // セッション保存を待たずにリダイレクト
   } catch (error) {
     console.error("ログインエラー:", error);
