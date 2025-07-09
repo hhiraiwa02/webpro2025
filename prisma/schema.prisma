@@ -30,3 +30,4 @@ model Paper {
           comment   String?
           createdAt DateTime @default(now())
         }
+        

@@ -1,7 +1,9 @@
+// index.ts の全体像 (変更点を適用済み)
+
 import express from "express";
 import { PrismaClient } from "./generated/prisma/client";
 import session from "express-session";
-import dotenv from "dotenv"; // bcryptjs は不要になるので削除
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -35,6 +37,7 @@ const isAuthenticated = (
   if (req.session && (req.session as any).userId) {
     return next();
   }
+  // ログインしていない場合、ログインページにリダイレクト
   res.redirect("/login");
 };
 
@@ -83,7 +86,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ログイン処理
+// ログイン処理 (上記修正済み)
 app.post("/login", async (req, res) => {
   const { name, password } = req.body;
 
@@ -99,18 +102,15 @@ app.post("/login", async (req, res) => {
       where: { name },
     });
 
-    // ユーザーが存在しない、またはユーザーのパスワードが設定されていない、またはパスワードが一致しない
     if (!user || user.password === null || user.password !== password) {
-      // 平文で比較
       return res.render("auth", {
-        error: "1ユーザー名またはパスワードが間違っています。",
+        error: "ユーザー名またはパスワードが間違っています。",
         message: null,
       });
     }
 
-    // パスワードが一致すればログイン成功
     (req.session as any).userId = user.id;
-    res.redirect("/papers-dashboard");
+    res.redirect("/papers-dashboard"); // セッション保存を待たずにリダイレクト
   } catch (error) {
     console.error("ログインエラー:", error);
     res.render("auth", {
@@ -125,7 +125,8 @@ app.get("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error("セッション破棄エラー:", err);
-      return res.redirect("/papers-dashboard");
+      // エラー発生時でも、authページに戻るようにする
+      return res.redirect("/");
     }
     res.redirect("/");
   });
