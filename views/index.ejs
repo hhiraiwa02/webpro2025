@@ -180,6 +180,18 @@
         border-color: #666;
         box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.2);
       }
+
+      /* ステータスの色分け */
+      .status-未読 { background-color: #f0f0f0; color: #666; } /* 薄いグレー、通常のテキスト */
+      .status-読了 { background-color: #e6ffe6; color: #338833; } /* 薄い緑、濃い緑のテキスト */
+      .status-要再読 { background-color: #fffbe6; color: #ccaa00; } /* 薄い黄、濃い黄のテキスト */
+      .status-レビュー中 { background-color: #e6f7ff; color: #0066cc; } /* 薄い青、濃い青のテキスト */
+
+      .status-select.status-未読 { border-color: #ccc; }
+      .status-select.status-読了 { border-color: #b3e6b3; }
+      .status-select.status-要再読 { border-color: #ffe066; }
+      .status-select.status-レビュー中 { border-color: #b3d9ff; }
+
     </style>
   </head>
   <body>
@@ -190,7 +202,6 @@
 
     <h1>論文管理</h1>
 
-    ---
 
     <h2>論文検索</h2>
     <form action="/papers" method="get" class="search-form">
@@ -238,7 +249,6 @@
       <button type="button" onclick="location.href='/papers'">リセット</button>
     </form>
 
-    ---
 
     <h2>あなたの論文一覧</h2>
     <% if (papers.length > 0) { %>
@@ -271,7 +281,7 @@
           </td>
           <td><%= paper.comment || 'N/A' %></td>
           <td>
-            <select class="status-select" data-paper-id="<%= paper.id %>">
+            <select class="status-select status-<%= paper.status %>" data-paper-id="<%= paper.id %>">
               <% statusOptions.slice(1).forEach(option => { /* 「全て」を除く */ %>
                 <option value="<%= option %>" <%= paper.status === option ? 'selected' : '' %>>
                   <%= option %>
@@ -279,8 +289,8 @@
               <% }) %>
             </select>
           </td>
-          <td><%= new Date(paper.createdAt).toLocaleString('ja-JP') %></td>
-          <td><%= new Date(paper.updatedAt).toLocaleString('ja-JP') %></td>
+          <td><%= formatToJST(paper.createdAt) %></td>
+          <td><%= formatToJST(paper.updatedAt) %></td>
           <td class="actions">
             <a href="/papers/edit/<%= paper.id %>" class="edit-button">編集</a>
             <form
@@ -300,7 +310,7 @@
     <p class="no-papers">
       論文はまだ登録されていません、または検索条件に一致する論文が見つかりませんでした。
     </p>
-    <% } %> ---
+    <% } %>
 
     <h2><%= editPaper ? '論文編集' : '論文追加' %></h2>
     <form action="<%= editPaper ? '/papers/update/' + editPaper.id : '/papers' %>" method="post">
@@ -351,7 +361,7 @@
       ><%= editPaper ? editPaper.comment : '' %></textarea>
 
       <label for="paperStatus">ステータス:</label>
-      <select id="paperStatus" name="status" class="status-select">
+      <select id="paperStatus" name="status" class="status-select status-<%= editPaper ? editPaper.status : '未読' %>">
         <% statusOptions.slice(1).forEach(option => { /* 「全て」を除く */ %>
           <option value="<%= option %>" <%= editPaper && editPaper.status === option ? 'selected' : '' %>>
             <%= option %>
@@ -371,6 +381,9 @@
         const statusSelects = document.querySelectorAll('.status-select[data-paper-id]');
 
         statusSelects.forEach(selectElement => {
+          // ロード時に元のステータスを保持しておく (失敗時のロールバック用)
+          selectElement.dataset.originalStatus = selectElement.value;
+
           selectElement.addEventListener('change', async (event) => {
             const paperId = event.target.dataset.paperId;
             const newStatus = event.target.value;
@@ -386,7 +399,9 @@
 
               if (response.ok) {
                 console.log('ステータス更新成功！');
-                // 成功メッセージ表示や、必要ならUIの更新（今回はページリロードしないので不要）
+                // CSSクラスを更新して色を反映
+                event.target.className = `status-select status-${newStatus}`;
+                event.target.dataset.originalStatus = newStatus; // 成功したら元のステータスも更新
               } else {
                 const errorData = await response.json();
                 console.error('ステータス更新失敗:', errorData.message);
@@ -400,10 +415,16 @@
               event.target.value = event.target.dataset.originalStatus || '';
             }
           });
-
-          // ロード時に元のステータスを保持しておく (失敗時のロールバック用)
-          selectElement.dataset.originalStatus = selectElement.value;
         });
+
+        // 編集フォームのステータス選択にも色を反映 (初回ロード時)
+        const editStatusSelect = document.getElementById('paperStatus');
+        if (editStatusSelect) {
+            editStatusSelect.className = `status-select status-${editStatusSelect.value}`;
+            editStatusSelect.addEventListener('change', (event) => {
+                event.target.className = `status-select status-${event.target.value}`;
+            });
+        }
       });
     </script>
   </body>

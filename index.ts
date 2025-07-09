@@ -38,6 +38,20 @@ const isAuthenticated = (
   res.redirect("/");
 };
 
+// **Helper function for JST date formatting**
+const formatToJST = (date: Date) => {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false, // 24時間表記
+    timeZone: "Asia/Tokyo",
+  }).format(date);
+};
+
 // 初期ルート: ログイン・ユーザー登録ページ
 app.get("/", async (req, res) => {
   if (req.session && req.session.userId) {
@@ -139,7 +153,7 @@ app.get("/papers", isAuthenticated, async (req, res) => {
   const searchTitle = req.query.searchTitle as string | undefined;
   const searchAuthor = req.query.searchAuthor as string | undefined;
   const searchCategory = req.query.searchCategory as string | undefined;
-  const searchStatus = req.query.searchStatus as string | undefined; // ステータス検索を追加
+  const searchStatus = req.query.searchStatus as string | undefined;
 
   const paperWhereClause: any = { userId: userId };
   if (searchTitle) {
@@ -155,7 +169,6 @@ app.get("/papers", isAuthenticated, async (req, res) => {
     };
   }
   if (searchStatus && searchStatus !== "全て") {
-    // 「全て」でない場合のみフィルタ
     paperWhereClause.status = searchStatus;
   }
 
@@ -170,7 +183,6 @@ app.get("/papers", isAuthenticated, async (req, res) => {
 
   console.log("ログインユーザーの論文一覧を取得したぞ:", papers);
 
-  // ステータスオプションを定義
   const statusOptions = ["全て", "未読", "読了", "要再読", "レビュー中"];
 
   res.render("index", {
@@ -179,8 +191,9 @@ app.get("/papers", isAuthenticated, async (req, res) => {
     searchTitle: searchTitle || "",
     searchAuthor: searchAuthor || "",
     searchCategory: searchCategory || "",
-    searchStatus: searchStatus || "全て", // 選択中のステータスを渡す
-    statusOptions, // ステータスオプションを渡す
+    searchStatus: searchStatus || "全て",
+    statusOptions,
+    formatToJST, // EJSにヘルパー関数を渡す
     editPaper: null,
   });
 });
@@ -200,7 +213,7 @@ app.post("/papers", isAuthenticated, async (req, res) => {
           url: url || null,
           comment: comment || null,
           userId: userId,
-          status: "未読", // 新規作成時はデフォルトで「未読」
+          status: "未読",
         },
       });
       console.log("新しい論文を追加したぞ:", newPaper);
@@ -232,7 +245,7 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
       orderBy: { updatedAt: "desc" },
     });
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    const statusOptions = ["未読", "読了", "要再読", "レビュー中"]; // 編集ページでもオプションを渡す
+    const statusOptions = ["未読", "読了", "要再読", "レビュー中"];
 
     res.render("index", {
       userName: user?.name,
@@ -240,8 +253,9 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
       searchTitle: "",
       searchAuthor: "",
       searchCategory: "",
-      searchStatus: "全て", // 編集画面表示時は検索ステータスをリセット
+      searchStatus: "全て",
       statusOptions,
+      formatToJST, // EJSにヘルパー関数を渡す
       editPaper: paperToEdit,
     });
   } catch (error) {
@@ -254,7 +268,7 @@ app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
 app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
   const paperId = parseInt(req.params.id);
-  const { name, author, category, url, comment, status } = req.body; // statusも受け取る
+  const { name, author, category, url, comment, status } = req.body;
 
   if (!name || !author) {
     console.warn("論文のタイトルと著者は必須です。");
@@ -278,7 +292,7 @@ app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
         category: category || null,
         url: url || null,
         comment: comment || null,
-        status: status, // ステータスを更新
+        status: status,
       },
     });
     console.log("論文を更新したぞ:", updatedPaper);
@@ -288,13 +302,12 @@ app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
   res.redirect("/papers");
 });
 
-// **論文ステータス更新APIエンドポイント**
+// 論文ステータス更新APIエンドポイント
 app.patch("/api/papers/:id/status", isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
   const paperId = parseInt(req.params.id);
-  const { status } = req.body; // 新しいステータスを受け取る
+  const { status } = req.body;
 
-  // 有効なステータスかチェック
   const validStatuses = ["未読", "読了", "要再読", "レビュー中"];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ message: "無効なステータス値です。" });
