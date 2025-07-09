@@ -27,9 +27,11 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", async (req, res) => {
   // データベースからすべてのユーザーを取得するのじゃ。
   const users = await prisma.user.findMany();
+  const papers = await prisma.paper.findMany();
   console.log("ユーザー一覧を取得したぞ:", users);
   // 'index.ejs' というテンプレートファイルをレンダリングし、取得したユーザー情報を渡すのじゃ。
   res.render("index", { users });
+  res.render("index", { papers });
 });
 
 // ユーザー追加ハンドラーを設定するのじゃ。
@@ -42,6 +44,19 @@ app.post("/users", async (req, res) => {
       data: { name },
     });
     console.log("新しいユーザーを追加したぞ:", newUser);
+  }
+  // ユーザー追加後、ルートページ（ユーザー一覧ページ）にリダイレクトするのじゃ。
+  res.redirect("/");
+});
+
+app.post("/papers", async (req, res) => {
+  const name = req.body.name; // フォームから送信された 'name' の値を取得するのじゃ。
+  const author = req.body.author;
+  if (name && author) {
+    // 名前が入力されていれば、新しいユーザーをデータベースに追加するぞ。
+    const newPaper = await prisma.paper.create({
+      data: { name: name, author: author },
+    });
   }
   // ユーザー追加後、ルートページ（ユーザー一覧ページ）にリダイレクトするのじゃ。
   res.redirect("/");

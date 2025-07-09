@@ -11,9 +11,26 @@
       <li><%= user.name %></li>
       <% }) %>
     </ul>
+    <h1>論文一覧</h1>
+    <ul>
+      <% papers.forEach(user => { %>
+      <li><%= paper.author %> : <%= paper.name %></li>
+      <% }) %>
+    </ul>
     <h2>ユーザー追加</h2>
     <form action="/users" method="post">
       <input type="text" name="name" placeholder="ユーザー名を入力" required />
+      <button type="submit">追加</button>
+    </form>
+    <h2>論文追加</h2>
+    <form action="/papers" method="post">
+      <input
+        type="text"
+        name="name"
+        placeholder="論文タイトルを入力"
+        required
+      />
+      <input type="text" author="author" placeholder="著者を入力" required />
       <button type="submit">追加</button>
     </form>
   </body>
