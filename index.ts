@@ -1,11 +1,5 @@
-// index.ts の全体像 (変更点を適用済み)
-
 import express from "express";
 import { PrismaClient } from "./generated/prisma/client";
-import session from "express-session";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const prisma = new PrismaClient({
   log: ["query"],
@@ -14,143 +8,23 @@ const prisma = new PrismaClient({
 const app = express();
 const PORT = process.env.PORT || 8888;
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "your_secret_key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === "production" ? true : false },
-  })
-);
-
 app.set("view engine", "ejs");
 app.set("views", "./views");
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 
-// 認証チェックミドルウェア
-const isAuthenticated = (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) => {
-  console.log(
-    "isAuthenticatedチェック:",
-    req.session && (req.session as any).userId ? "認証済み" : "未認証"
-  );
-  console.log("現在のセッションID:", req.sessionID);
-  console.log("現在のセッションデータ:", req.session);
-  if (req.session && (req.session as any).userId) {
-    return next();
-  }
-  // ログインしていない場合、ログインページにリダイレクト
-  res.redirect("/login");
-};
+app.get("/", async (req, res) => {
+  // ユーザー一覧はそのまま
+  const users = await prisma.user.findMany();
 
-// --- ルートハンドラー ---
-
-// 初期ルート: ユーザー登録とログインフォームを表示
-app.get("/", (req, res) => {
-  res.render("auth", { message: null, error: null });
-});
-
-// ログインページを表示
-app.get("/login", (req, res) => {
-  res.render("auth", { message: null, error: null });
-});
-
-// ユーザー登録処理
-app.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
-
-  if (!name) {
-    return res.render("auth", {
-      error: "ユーザー名を入力してください。",
-      message: null,
-    });
-  }
-
-  try {
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email: email || null, // 空文字列の場合、nullを保存
-        password: password || null, // パスワードを平文で保存 (空文字列の場合null)
-      },
-    });
-    console.log("新しいユーザーを登録したぞ:", newUser);
-    res.render("auth", {
-      message: "登録が完了しました！ログインしてください。",
-      error: null,
-    });
-  } catch (error: any) {
-    console.error("ユーザー登録エラー:", error);
-    res.render("auth", {
-      error: "ユーザー登録に失敗しました。",
-      message: null,
-    });
-  }
-});
-
-// ログイン処理 (上記修正済み)
-app.post("/login", async (req, res) => {
-  const { name, password } = req.body;
-
-  if (!name || !password) {
-    return res.render("auth", {
-      error: "名前とパスワードを入力してください。",
-      message: null,
-    });
-  }
-
-  try {
-    const user = await prisma.user.findFirst({
-      where: { name },
-    });
-
-    if (!user || user.password === null || user.password !== password) {
-      return res.render("auth", {
-        error: "ユーザー名またはパスワードが間違っています。",
-        message: null,
-      });
-    }
-
-    (req.session as any).userId = user.id;
-    console.log(
-      "ログイン成功！セッションに保存を試みました。UserID:",
-      (req.session as any).userId
-    );
-    res.redirect("/papers-dashboard"); // セッション保存を待たずにリダイレクト
-  } catch (error) {
-    console.error("ログインエラー:", error);
-    res.render("auth", {
-      error: "ログイン中にエラーが発生しました。",
-      message: null,
-    });
-  }
-});
-
-// ログアウト処理
-app.get("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error("セッション破棄エラー:", err);
-      // エラー発生時でも、authページに戻るようにする
-      return res.redirect("/");
-    }
-    res.redirect("/");
-  });
-});
-
-// 論文の検索・一覧ページ (ログイン必須)
-app.get("/papers-dashboard", isAuthenticated, async (req, res) => {
+  // 検索クエリパラメータを取得
   const searchTitle = req.query.searchTitle as string | undefined;
   const searchAuthor = req.query.searchAuthor as string | undefined;
   const searchCategory = req.query.searchCategory as string | undefined;
 
+  // 検索条件を構築
   const paperWhereClause: any = {};
   if (searchTitle) {
-    paperWhereClause.name = { contains: searchTitle, mode: "insensitive" };
+    paperWhereClause.name = { contains: searchTitle, mode: "insensitive" }; // 部分一致検索 (大文字小文字を区別しない)
   }
   if (searchAuthor) {
     paperWhereClause.author = { contains: searchAuthor, mode: "insensitive" };
@@ -162,28 +36,45 @@ app.get("/papers-dashboard", isAuthenticated, async (req, res) => {
     };
   }
 
+  // データベースから論文を取得（検索条件を適用）
   const papers = await prisma.paper.findMany({
     where: paperWhereClause,
   });
 
-  res.render("papers-dashboard", {
+  console.log("ユーザー一覧を取得したぞ:", users);
+  console.log("論文一覧を取得したぞ:", papers);
+
+  // EJSテンプレートにユーザー、論文、現在の検索クエリを渡す
+  res.render("index", {
+    users,
     papers,
-    searchTitle: searchTitle || "",
+    searchTitle: searchTitle || "", // テンプレートで利用するために現在の検索クエリも渡す
     searchAuthor: searchAuthor || "",
     searchCategory: searchCategory || "",
   });
 });
 
-// 論文追加処理 (ログイン必須)
-app.post("/papers", isAuthenticated, async (req, res) => {
+app.post("/users", async (req, res) => {
+  const name = req.body.name;
+  if (name) {
+    const newUser = await prisma.user.create({
+      data: { name },
+    });
+    console.log("新しいユーザーを追加したぞ:", newUser);
+  }
+  res.redirect("/");
+});
+
+app.post("/papers", async (req, res) => {
   const { name, author, category, url, comment } = req.body;
 
   if (name && author) {
+    // タイトルと著者は必須
     const newPaper = await prisma.paper.create({
       data: {
         name,
         author,
-        category: category || null,
+        category: category || null, // 任意項目は空文字列の場合nullにする
         url: url || null,
         comment: comment || null,
       },
@@ -192,12 +83,11 @@ app.post("/papers", isAuthenticated, async (req, res) => {
   } else {
     console.warn("論文のタイトルと著者は必須です。");
   }
-  res.redirect("/papers-dashboard");
+  res.redirect("/");
 });
 
 app.listen(PORT, () => {
   console.log(
     `サーバーが起動したぞ！ http://localhost:${PORT} でアクセスできるじゃろう。`
   );
-  console.log(`SESSION_SECRETが設定されていることを確認してください。`);
 });
