@@ -57,13 +57,12 @@ app.post("/register", async (req, res) => {
   }
 
   try {
-    // パスワードのハッシュ化
-    const hashedPassword = await bcrypt.hash(password, 10); // ソルトラウンド10
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
       data: {
         name,
-        email,
+        email, // emailの重複は許可される
         password: hashedPassword,
       },
     });
@@ -74,15 +73,13 @@ app.post("/register", async (req, res) => {
   } catch (error: any) {
     if (error.code === "P2002" && error.meta?.target) {
       if (error.meta.target.includes("name")) {
+        // nameは引き続きユニークなので、このチェックは残します
         return res.render("auth", {
           errorMessage: "このユーザー名は既に使用されています。",
         });
       }
-      if (error.meta.target.includes("email")) {
-        return res.render("auth", {
-          errorMessage: "このEmailアドレスは既に登録されています。",
-        });
-      }
+      // emailのユニーク制約を削除したため、emailに関する重複エラーハンドリングは不要です
+      // もしP2002エラーがname以外で発生した場合の一般的なエラーメッセージ
     }
     console.error("ユーザー登録エラー:", error);
     res.render("auth", { errorMessage: "ユーザー登録に失敗しました。" });
