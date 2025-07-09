@@ -2,7 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>論文管理</title>
+    <title>ユーザーと論文一覧</title>
     <style>
       body {
         font-family: sans-serif;
@@ -12,28 +12,12 @@
       h2 {
         color: #333;
       }
-      .user-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
+      ul {
+        list-style: none;
+        padding: 0;
       }
-      .user-info span {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #007bff;
-      }
-      .user-info a {
-        text-decoration: none;
-        background-color: #dc3545;
-        color: white;
-        padding: 8px 15px;
-        border-radius: 4px;
-      }
-      .user-info a:hover {
-        background-color: #c82333;
+      li {
+        margin-bottom: 5px;
       }
       form {
         margin-bottom: 20px;
@@ -84,17 +68,25 @@
     </style>
   </head>
   <body>
-    <div class="user-info">
-      <span>こんにちは、<%= userName %>さん！</span>
-      <a href="/logout">ログアウト</a>
-    </div>
+    <h1>ユーザーと論文管理</h1>
 
-    <h1>論文管理</h1>
+    <h2>ユーザー一覧</h2>
+    <ul>
+      <% users.forEach(user => { %>
+      <li><%= user.name %></li>
+      <% }) %>
+    </ul>
+
+    <h2>ユーザー追加</h2>
+    <form action="/users" method="post">
+      <input type="text" name="name" placeholder="ユーザー名を入力" required />
+      <button type="submit">追加</button>
+    </form>
 
     ---
 
     <h2>論文検索</h2>
-    <form action="/papers" method="get" class="search-form">
+    <form action="/" method="get" class="search-form">
       <label for="searchTitle">タイトル:</label>
       <input
         type="text"
@@ -122,12 +114,12 @@
         placeholder="カテゴリで検索"
       />
       <button type="submit">検索</button>
-      <button type="button" onclick="location.href='/papers'">リセット</button>
+      <button type="button" onclick="location.href='/'">リセット</button>
     </form>
 
     ---
 
-    <h2>あなたの論文一覧</h2>
+    <h2>論文一覧</h2>
     <% if (papers.length > 0) { %>
     <table>
       <thead>
@@ -145,6 +137,7 @@
           <td><%= paper.name %></td>
           <td><%= paper.author %></td>
           <td><%= paper.category || 'N/A' %></td>
+          <%# カテゴリがnullの場合は'N/A'と表示 %>
           <td>
             <% if (paper.url) { %>
             <a href="<%= paper.url %>" target="_blank" rel="noopener noreferrer"

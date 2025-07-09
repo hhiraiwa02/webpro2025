@@ -15,19 +15,21 @@ datasource db {
   }
 
 // schema.prisma
-model Paper {
-  id        Int      @id @default(autoincrement())
-  name      String
-  author    String
-  category  String?  // 任意項目なので?を付ける
-  url       String?  // 任意項目なので?を付ける
-  comment   String?  // 任意項目なので?を付ける
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model User {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique // 名前をユニークにする
+  email    String  // emailを追加しユニークにする
+  password String  // パスワードを追加
+  papers   Paper[] // UserとPaperの1対多のリレーション
 }
 
-model User {
-  id   Int    @id @default(autoincrement())
-  name String @unique
-}
-        
+model Paper {
+  id       Int     @id @default(autoincrement())
+  name     String
+  author   String
+  category String?
+  url      String?
+  comment  String?
+  userId   Int     // 論文を所有するユーザーのID
+  user     User    @relation(fields: [userId], references: [id]) // Userモデルへのリレーション
+}      
