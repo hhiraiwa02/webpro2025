@@ -4,13 +4,20 @@
     <meta charset="UTF-8" />
     <title>論文管理</title>
     <style>
+      /* 白黒を基調としたスタイリング */
       body {
-        font-family: sans-serif;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
         margin: 20px;
+        background-color: #f0f0f0; /* 薄いグレー */
+        color: #333; /* 濃いグレーのテキスト */
       }
       h1,
       h2 {
-        color: #333;
+        color: #1a1a1a; /* ほぼ黒 */
+        font-weight: 600;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+        margin-top: 30px;
       }
       .user-info {
         display: flex;
@@ -18,68 +25,143 @@
         align-items: center;
         margin-bottom: 20px;
         padding: 10px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid #ddd;
       }
       .user-info span {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #007bff;
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #555;
       }
       .user-info a {
         text-decoration: none;
-        background-color: #dc3545;
+        background-color: #333; /* 濃いグレー */
         color: white;
         padding: 8px 15px;
-        border-radius: 4px;
+        border-radius: 5px;
+        transition: background-color 0.2s ease;
       }
       .user-info a:hover {
-        background-color: #c82333;
+        background-color: #555; /* ホバーで少し明るく */
       }
       form {
-        margin-bottom: 20px;
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
+        background-color: #ffffff; /* 白 */
+        padding: 20px;
+        margin-bottom: 30px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      }
+      form label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-size: 0.95em;
+        font-weight: 500;
       }
       form input[type="text"],
       form input[type="url"],
       form textarea {
         width: calc(100% - 22px);
-        padding: 8px;
-        margin-bottom: 10px;
+        padding: 10px;
+        margin-bottom: 15px;
         border: 1px solid #ccc;
-        border-radius: 3px;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 0.95em;
       }
       form button {
-        padding: 10px 15px;
-        background-color: #007bff;
+        padding: 10px 20px;
+        background-color: #333;
         color: white;
         border: none;
-        border-radius: 4px;
+        border-radius: 5px;
         cursor: pointer;
+        font-size: 1em;
+        font-weight: 600;
+        transition: background-color 0.2s ease;
+        margin-right: 10px; /* ボタン間のスペース */
       }
       form button:hover {
-        background-color: #0056b3;
+        background-color: #555;
+      }
+      form button[type="reset"] {
+        background-color: #666; /* リセットボタンの色 */
+      }
+      form button[type="reset"]:hover {
+        background-color: #888;
       }
       table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden; /* 角丸を適用するために必要 */
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
       }
       th,
       td {
-        border: 1px solid #ddd;
-        padding: 8px;
+        border: 1px solid #eee; /* 薄いボーダー */
+        padding: 12px;
         text-align: left;
+        font-size: 0.9em;
       }
       th {
-        background-color: #f2f2f2;
+        background-color: #f8f8f8; /* わずかに明るい背景 */
+        color: #555;
+        font-weight: 600;
       }
-      .search-form label {
-        margin-right: 10px;
+      tr:nth-child(even) {
+        background-color: #fafafa; /* 偶数行のストライプ */
       }
-      .search-form input {
-        margin-right: 10px;
+      td.actions {
+        white-space: nowrap; /* ボタンが改行されないように */
+      }
+      td.actions button,
+      td.actions a {
+        padding: 6px 12px;
+        margin-right: 5px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        text-decoration: none;
+        display: inline-block; /* ボタンとリンクを並べる */
+      }
+      td.actions .edit-button {
+        background-color: #666; /* 編集ボタン */
+        color: white;
+      }
+      td.actions .edit-button:hover {
+        background-color: #888;
+      }
+      td.actions .delete-button {
+        background-color: #a00; /* 削除ボタン */
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      td.actions .delete-button:hover {
+        background-color: #c00;
+      }
+      .search-form {
+        display: flex;
+        flex-wrap: wrap; /* 狭い画面で折り返す */
+        gap: 15px; /* 要素間のスペース */
+        align-items: flex-end; /* ボタンを下揃えに */
+      }
+      .search-form > div {
+        flex: 1; /* 均等な幅に */
+        min-width: 150px; /* 最小幅を設定 */
+      }
+      .search-form button {
+        margin-top: 5px; /* ラベルとの位置調整 */
+      }
+      .no-papers {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
       }
     </style>
   </head>
@@ -95,32 +177,36 @@
 
     <h2>論文検索</h2>
     <form action="/papers" method="get" class="search-form">
-      <label for="searchTitle">タイトル:</label>
-      <input
-        type="text"
-        id="searchTitle"
-        name="searchTitle"
-        value="<%= searchTitle %>"
-        placeholder="タイトルで検索"
-      />
-
-      <label for="searchAuthor">著者:</label>
-      <input
-        type="text"
-        id="searchAuthor"
-        name="searchAuthor"
-        value="<%= searchAuthor %>"
-        placeholder="著者名で検索"
-      />
-
-      <label for="searchCategory">カテゴリ:</label>
-      <input
-        type="text"
-        id="searchCategory"
-        name="searchCategory"
-        value="<%= searchCategory %>"
-        placeholder="カテゴリで検索"
-      />
+      <div>
+        <label for="searchTitle">タイトル:</label>
+        <input
+          type="text"
+          id="searchTitle"
+          name="searchTitle"
+          value="<%= searchTitle %>"
+          placeholder="タイトルで検索"
+        />
+      </div>
+      <div>
+        <label for="searchAuthor">著者:</label>
+        <input
+          type="text"
+          id="searchAuthor"
+          name="searchAuthor"
+          value="<%= searchAuthor %>"
+          placeholder="著者名で検索"
+        />
+      </div>
+      <div>
+        <label for="searchCategory">カテゴリ:</label>
+        <input
+          type="text"
+          id="searchCategory"
+          name="searchCategory"
+          value="<%= searchCategory %>"
+          placeholder="カテゴリで検索"
+        />
+      </div>
       <button type="submit">検索</button>
       <button type="button" onclick="location.href='/papers'">リセット</button>
     </form>
@@ -137,6 +223,9 @@
           <th>カテゴリ</th>
           <th>ウェブサイト</th>
           <th>コメント</th>
+          <th>追加日時</th>
+          <th>更新日時</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -153,24 +242,41 @@
             <% } else { %> N/A <% } %>
           </td>
           <td><%= paper.comment || 'N/A' %></td>
+          <td><%= new Date(paper.createdAt).toLocaleString('ja-JP') %></td>
+          <td><%= new Date(paper.updatedAt).toLocaleString('ja-JP') %></td>
+          <td class="actions">
+            <a href="/papers/edit/<%= paper.id %>" class="edit-button">編集</a>
+            <form
+              action="/papers/delete/<%= paper.id %>"
+              method="post"
+              style="display: inline"
+              onsubmit="return confirm('本当にこの論文を削除しますか？');"
+            >
+              <button type="submit" class="delete-button">削除</button>
+            </form>
+          </td>
         </tr>
         <% }) %>
       </tbody>
     </table>
     <% } else { %>
-    <p>
+    <p class="no-papers">
       論文はまだ登録されていません、または検索条件に一致する論文が見つかりませんでした。
     </p>
     <% } %> ---
 
-    <h2>論文追加</h2>
-    <form action="/papers" method="post">
+    <h2><%= editPaper ? '論文編集' : '論文追加' %></h2>
+    <form
+      action="<%= editPaper ? '/papers/update/' + editPaper.id : '/papers' %>"
+      method="post"
+    >
       <label for="paperName">論文タイトル (必須):</label>
       <input
         type="text"
         id="paperName"
         name="name"
         placeholder="論文タイトルを入力"
+        value="<%= editPaper ? editPaper.name : '' %>"
         required
       />
 
@@ -180,6 +286,7 @@
         id="paperAuthor"
         name="author"
         placeholder="著者名を入力"
+        value="<%= editPaper ? editPaper.author : '' %>"
         required
       />
 
@@ -189,6 +296,7 @@
         id="paperCategory"
         name="category"
         placeholder="カテゴリを入力"
+        value="<%= editPaper ? editPaper.category : '' %>"
       />
 
       <label for="paperUrl">ウェブサイトURL (任意):</label>
@@ -197,6 +305,7 @@
         id="paperUrl"
         name="url"
         placeholder="論文のURLを入力"
+        value="<%= editPaper ? editPaper.url : '' %>"
       />
 
       <label for="paperComment">コメント (任意):</label>
@@ -205,9 +314,18 @@
         name="comment"
         placeholder="コメントを入力"
         rows="4"
-      ></textarea>
+      >
+<%= editPaper ? editPaper.comment : '' %></textarea
+      >
 
-      <button type="submit">論文追加</button>
+      <button type="submit">
+        <%= editPaper ? '論文を更新' : '論文追加' %>
+      </button>
+      <% if (editPaper) { %>
+      <button type="button" onclick="location.href='/papers'">
+        キャンセル
+      </button>
+      <% } %>
     </form>
   </body>
 </html>

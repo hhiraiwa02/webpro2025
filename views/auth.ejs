@@ -4,79 +4,93 @@
     <meta charset="UTF-8" />
     <title>ログイン・ユーザー登録</title>
     <style>
+      /* 白黒を基調としたスタイリング */
       body {
-        font-family: sans-serif;
-        margin: 20px;
-        background-color: #f4f4f4;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        margin: 0;
+        background-color: #f0f0f0; /* 薄いグレー */
+        color: #333; /* 濃いグレーのテキスト */
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
       }
       .container {
-        background-color: white;
-        padding: 30px;
+        background-color: #ffffff; /* 白 */
+        padding: 40px;
         border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* 影を薄く */
         width: 100%;
         max-width: 400px;
+        box-sizing: border-box;
       }
       h1,
       h2 {
-        color: #333;
+        color: #1a1a1a; /* ほぼ黒 */
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
+        font-weight: 600;
       }
       form {
         margin-bottom: 20px;
       }
       form label {
         display: block;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         color: #555;
+        font-size: 0.95em;
+        font-weight: 500;
       }
       form input[type="text"],
       form input[type="email"],
       form input[type="password"] {
-        width: calc(100% - 22px);
-        padding: 10px;
-        margin-bottom: 15px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box; /* padding を含めて幅を計算 */
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #ccc; /* 薄いボーダー */
+        border-radius: 5px;
+        box-sizing: border-box;
+        font-size: 1em;
       }
       form button {
         width: 100%;
-        padding: 10px 15px;
-        background-color: #007bff;
+        padding: 12px 15px;
+        background-color: #333; /* 濃いグレー */
         color: white;
         border: none;
-        border-radius: 4px;
+        border-radius: 5px;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 1em;
+        font-weight: 600;
+        transition: background-color 0.2s ease;
       }
       form button:hover {
-        background-color: #0056b3;
+        background-color: #555; /* ホバーで少し明るく */
       }
       .error-message {
-        color: red;
+        color: #cc0000; /* 赤色でエラー表示 */
         text-align: center;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
+        font-size: 0.9em;
       }
       .switch-form {
         text-align: center;
-        margin-top: 20px;
+        margin-top: 25px;
+        font-size: 0.9em;
+        color: #666;
       }
       .switch-form button {
         background: none;
         border: none;
-        color: #007bff;
+        color: #333; /* 濃いグレー */
         cursor: pointer;
         text-decoration: underline;
-        font-size: 14px;
+        font-size: 1em;
+        padding: 0;
+        margin-left: 5px;
       }
       .switch-form button:hover {
-        color: #0056b3;
+        color: #555;
       }
     </style>
   </head>

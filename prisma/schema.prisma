@@ -32,4 +32,6 @@ model Paper {
   comment  String?
   userId   Int     // 論文を所有するユーザーのID
   user     User    @relation(fields: [userId], references: [id]) // Userモデルへのリレーション
+  createdAt DateTime @default(now()) // 追加日時
+  updatedAt DateTime @updatedAt // 更新日時
 }      

@@ -1,8 +1,8 @@
 // index.ts
 import express from "express";
 import { PrismaClient } from "./generated/prisma/client";
-import session from "express-session"; // セッション管理のためのパッケージ
-import bcrypt from "bcrypt"; // パスワードハッシュ化のためのパッケージ
+import session from "express-session";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient({
   log: ["query"],
@@ -18,10 +18,10 @@ app.use(express.urlencoded({ extended: true }));
 // セッションミドルウェアの設定
 app.use(
   session({
-    secret: "your_secret_key", // 秘密鍵 (本番環境では環境変数で管理すること)
+    secret: "your_secret_key",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 24時間セッションを保持
+    cookie: { maxAge: 1000 * 60 * 60 * 24 },
   })
 );
 
@@ -34,16 +34,15 @@ const isAuthenticated = (
   if (req.session && req.session.userId) {
     return next();
   }
-  res.redirect("/"); // ログインしていない場合はルートページへリダイレクト
+  res.redirect("/");
 };
 
 // 初期ルート: ログイン・ユーザー登録ページ
 app.get("/", async (req, res) => {
   if (req.session && req.session.userId) {
-    // ログイン済みの場合は論文管理ページへリダイレクト
     return res.redirect("/papers");
   }
-  res.render("auth", { errorMessage: null }); // 認証ページ (auth.ejs を作成します)
+  res.render("auth", { errorMessage: null });
 });
 
 // ユーザー登録処理
@@ -62,7 +61,7 @@ app.post("/register", async (req, res) => {
     const newUser = await prisma.user.create({
       data: {
         name,
-        email, // emailの重複は許可される
+        email,
         password: hashedPassword,
       },
     });
@@ -73,13 +72,10 @@ app.post("/register", async (req, res) => {
   } catch (error: any) {
     if (error.code === "P2002" && error.meta?.target) {
       if (error.meta.target.includes("name")) {
-        // nameは引き続きユニークなので、このチェックは残します
         return res.render("auth", {
           errorMessage: "このユーザー名は既に使用されています。",
         });
       }
-      // emailのユニーク制約を削除したため、emailに関する重複エラーハンドリングは不要です
-      // もしP2002エラーがname以外で発生した場合の一般的なエラーメッセージ
     }
     console.error("ユーザー登録エラー:", error);
     res.render("auth", { errorMessage: "ユーザー登録に失敗しました。" });
@@ -107,7 +103,6 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    // パスワードの比較
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -116,9 +111,8 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    // ログイン成功: セッションにユーザーIDを保存
     req.session.userId = user.id;
-    res.redirect("/papers"); // 論文管理ページへリダイレクト
+    res.redirect("/papers");
   } catch (error) {
     console.error("ログインエラー:", error);
     res.render("auth", { errorMessage: "ログインに失敗しました。" });
@@ -132,7 +126,7 @@ app.get("/logout", (req, res) => {
       console.error("ログアウトエラー:", err);
       return res.redirect("/papers");
     }
-    res.clearCookie("connect.sid"); // セッションクッキーを削除
+    res.clearCookie("connect.sid");
     res.redirect("/");
   });
 });
@@ -141,13 +135,11 @@ app.get("/logout", (req, res) => {
 app.get("/papers", isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
 
-  // 検索クエリパラメータを取得
   const searchTitle = req.query.searchTitle as string | undefined;
   const searchAuthor = req.query.searchAuthor as string | undefined;
   const searchCategory = req.query.searchCategory as string | undefined;
 
-  // 検索条件を構築
-  const paperWhereClause: any = { userId: userId }; // ログインユーザーの論文のみ
+  const paperWhereClause: any = { userId: userId };
   if (searchTitle) {
     paperWhereClause.name = { contains: searchTitle, mode: "insensitive" };
   }
@@ -161,9 +153,11 @@ app.get("/papers", isAuthenticated, async (req, res) => {
     };
   }
 
-  // データベースから論文を取得（検索条件とユーザーIDを適用）
   const papers = await prisma.paper.findMany({
     where: paperWhereClause,
+    orderBy: {
+      updatedAt: "desc", // 更新日時でソート
+    },
   });
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -171,11 +165,12 @@ app.get("/papers", isAuthenticated, async (req, res) => {
   console.log("ログインユーザーの論文一覧を取得したぞ:", papers);
 
   res.render("index", {
-    userName: user?.name, // ログインユーザーの名前を渡す
+    userName: user?.name,
     papers,
     searchTitle: searchTitle || "",
     searchAuthor: searchAuthor || "",
     searchCategory: searchCategory || "",
+    editPaper: null, // 編集モードではないことを示す
   });
 });
 
@@ -185,19 +180,122 @@ app.post("/papers", isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
 
   if (name && author && userId) {
-    const newPaper = await prisma.paper.create({
+    try {
+      const newPaper = await prisma.paper.create({
+        data: {
+          name,
+          author,
+          category: category || null,
+          url: url || null,
+          comment: comment || null,
+          userId: userId,
+        },
+      });
+      console.log("新しい論文を追加したぞ:", newPaper);
+    } catch (error) {
+      console.error("論文追加エラー:", error);
+    }
+  } else {
+    console.warn("論文のタイトルと著者は必須です。");
+  }
+  res.redirect("/papers");
+});
+
+// 論文編集フォーム表示（認証が必要）
+app.get("/papers/edit/:id", isAuthenticated, async (req, res) => {
+  const userId = req.session.userId;
+  const paperId = parseInt(req.params.id);
+
+  try {
+    const paperToEdit = await prisma.paper.findUnique({
+      where: { id: paperId },
+    });
+
+    if (!paperToEdit || paperToEdit.userId !== userId) {
+      // 論文が存在しないか、現在のユーザーのものでない場合
+      return res.redirect("/papers");
+    }
+
+    const papers = await prisma.paper.findMany({
+      where: { userId: userId },
+      orderBy: { updatedAt: "desc" },
+    });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    res.render("index", {
+      userName: user?.name,
+      papers,
+      searchTitle: "",
+      searchAuthor: "",
+      searchCategory: "",
+      editPaper: paperToEdit, // 編集対象の論文データを渡す
+    });
+  } catch (error) {
+    console.error("論文編集フォーム表示エラー:", error);
+    res.redirect("/papers");
+  }
+});
+
+// 論文更新処理（認証が必要）
+app.post("/papers/update/:id", isAuthenticated, async (req, res) => {
+  const userId = req.session.userId;
+  const paperId = parseInt(req.params.id);
+  const { name, author, category, url, comment } = req.body;
+
+  if (!name || !author) {
+    console.warn("論文のタイトルと著者は必須です。");
+    return res.redirect("/papers");
+  }
+
+  try {
+    const existingPaper = await prisma.paper.findUnique({
+      where: { id: paperId },
+    });
+
+    if (!existingPaper || existingPaper.userId !== userId) {
+      // 論文が存在しないか、現在のユーザーのものでない場合
+      return res.redirect("/papers");
+    }
+
+    const updatedPaper = await prisma.paper.update({
+      where: { id: paperId },
       data: {
         name,
         author,
         category: category || null,
         url: url || null,
         comment: comment || null,
-        userId: userId, // ログイン中のユーザーIDを保存
+        updatedAt: new Date(), // 更新日時を明示的に設定（@updatedAtが自動でやってくれるが念のため）
       },
     });
-    console.log("新しい論文を追加したぞ:", newPaper);
-  } else {
-    console.warn("論文のタイトルと著者は必須です。");
+    console.log("論文を更新したぞ:", updatedPaper);
+  } catch (error) {
+    console.error("論文更新エラー:", error);
+  }
+  res.redirect("/papers");
+});
+
+// 論文削除処理（認証が必要）
+app.post("/papers/delete/:id", isAuthenticated, async (req, res) => {
+  const userId = req.session.userId;
+  const paperId = parseInt(req.params.id);
+
+  try {
+    const existingPaper = await prisma.paper.findUnique({
+      where: { id: paperId },
+    });
+
+    if (!existingPaper || existingPaper.userId !== userId) {
+      // 論文が存在しないか、現在のユーザーのものでない場合
+      return res.redirect("/papers");
+    }
+
+    await prisma.paper.delete({
+      where: { id: paperId },
+    });
+    console.log(`論文ID ${paperId} を削除したぞ。`);
+  } catch (error) {
+    console.error("論文削除エラー:", error);
   }
   res.redirect("/papers");
 });
