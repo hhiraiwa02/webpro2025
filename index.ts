@@ -103,7 +103,7 @@ app.post("/login", async (req, res) => {
     if (!user || user.password === null || user.password !== password) {
       // 平文で比較
       return res.render("auth", {
-        error: "ユーザー名またはパスワードが間違っています。",
+        error: "1ユーザー名またはパスワードが間違っています。",
         message: null,
       });
     }
